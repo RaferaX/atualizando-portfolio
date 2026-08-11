@@ -21,6 +21,18 @@ import {
 } from "lucide-react";
 import { Image as ImagePlaceholder } from "lucide-react";
 
+type Project = {
+  id: string;
+  title: string;
+  desc: string;
+  stack: string[];
+  github: string;
+  deploy: string;
+  image: string;
+};
+
+type BioLine = { key: string; value: string };
+
 const FONT_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -67,7 +79,7 @@ const SKILLS = [
 // Dica: para trocar a imagem de um projeto, coloque o arquivo em /public
 // (ex: /public/projetos/painel-financeiro.png) e ajuste o campo "image" abaixo.
 // Se "image" ficar vazio (""), o card volta a mostrar o placeholder automaticamente.
-const PROJECTS = [
+const PROJECTS: Project[] = [
   {
     id: "01",
     title: "Painel financeiro",
@@ -75,7 +87,7 @@ const PROJECTS = [
     stack: ["Next.js", "TypeScript", "Node.js", "PostgreSQL"],
     github: "https://github.com/RaferaX/financas-pessoaiso",
     deploy: "https://financas-pessoais-hdcq.vercel.app/",
-    image: "./painel-financeiro.png",
+    image: "/painel-financeiro.png",
   },
   {
     id: "02",
@@ -155,7 +167,7 @@ const EXPERIENCES = [
   },
 ];
 
-const BIO_LINES = [
+const BIO_LINES: BioLine[] = [
   { key: "nome", value: '"Rafael Leonardo da Silva"' },
   { key: "idade", value: "22" },
   { key: "cargo", value: '"Desenvolvedor Full-Stack"' },
@@ -164,13 +176,18 @@ const BIO_LINES = [
   { key: "disponivel", value: "true" },
 ];
 
-function useTypedLines(lines, speed = 28, startDelay = 400, pauseDuration = 3000) {
+function useTypedLines(
+  lines: BioLine[],
+  speed = 28,
+  startDelay = 400,
+  pauseDuration = 3000
+) {
   const [typedCount, setTypedCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
   const firstRun = useRef(true);
 
   useEffect(() => {
-    let timeout;
+    let timeout: ReturnType<typeof setTimeout>;
 
     if (typedCount >= lines.length) {
       timeout = setTimeout(() => {
@@ -251,15 +268,15 @@ function CodeCard() {
   );
 }
 
-function useCountUp(target, active, duration = 1000) {
+function useCountUp(target: number, active: boolean, duration = 1000) {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
     if (!active) return;
-    let start = null;
-    let frame;
+    let start: number | null = null;
+    let frame: number;
 
-    const step = (timestamp) => {
+    const step = (timestamp: number) => {
       if (!start) start = timestamp;
       const progress = Math.min((timestamp - start) / duration, 1);
       setValue(Math.round(progress * target));
@@ -272,7 +289,9 @@ function useCountUp(target, active, duration = 1000) {
   return value;
 }
 
-function SkillCard({ skill, index }) {
+type Skill = { name: string; level: number; icon: React.ElementType };
+
+function SkillCard({ skill, index }: { skill: Skill; index: number }) {
   const [entered, setEntered] = useState(false);
   const count = useCountUp(skill.level, entered);
   const Icon = skill.icon;
@@ -316,7 +335,15 @@ function SkillCard({ skill, index }) {
   );
 }
 
-function Section({ id, className = "", children }) {
+function Section({
+  id,
+  className = "",
+  children,
+}: {
+  id: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} className={`px-6 md:px-12 ${className}`}>
       <div className="max-w-6xl mx-auto">{children}</div>
@@ -324,7 +351,7 @@ function Section({ id, className = "", children }) {
   );
 }
 
-function Eyebrow({ children }) {
+function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <p className="f-mono text-xs text-accent tracking-widest uppercase mb-3">
       // {children}
@@ -332,7 +359,7 @@ function Eyebrow({ children }) {
   );
 }
 
-function Nav({ active }) {
+function Nav({ active }: { active: string }) {
   const [open, setOpen] = useState(false);
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -509,13 +536,24 @@ function PhotoPlaceholder({ label = "adicione uma imagem", className = "" }) {
   );
 }
 
-const PORTFOLIO_TABS = [
+const PORTFOLIO_TABS: {
+  id: "projetos" | "certificados" | "experiencias";
+  label: string;
+}[] = [
   { id: "projetos", label: "projetos" },
   { id: "certificados", label: "certificados" },
   { id: "experiencias", label: "experiências" },
 ];
 
-function ProjectCard({ p, i, onOpen }) {
+function ProjectCard({
+  p,
+  i,
+  onOpen,
+}: {
+  p: Project;
+  i: number;
+  onOpen: (p: Project) => void;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -558,7 +596,7 @@ function ProjectCard({ p, i, onOpen }) {
         {p.desc}
       </p>
       <div className="flex flex-wrap gap-2 mb-4">
-        {p.stack.map((t) => (
+        {p.stack.map((t: string) => (
           <span
             key={t}
             className="f-mono text-xs text-accent2 bg-surface-2 px-2.5 py-1 rounded-md"
@@ -574,9 +612,15 @@ function ProjectCard({ p, i, onOpen }) {
   );
 }
 
-function ProjectModal({ project, onClose }) {
+function ProjectModal({
+  project,
+  onClose,
+}: {
+  project: Project | null;
+  onClose: () => void;
+}) {
   useEffect(() => {
-    const handler = (e) => {
+    const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
@@ -640,7 +684,7 @@ function ProjectModal({ project, onClose }) {
           </p>
 
           <div className="flex flex-wrap gap-2 mb-8">
-            {project.stack.map((t) => (
+            {project.stack.map((t: string) => (
               <span
                 key={t}
                 className="f-mono text-xs text-accent2 bg-surface-2 px-2.5 py-1 rounded-md"
@@ -676,7 +720,15 @@ function ProjectModal({ project, onClose }) {
   );
 }
 
-function CertificateCard({ c, i }) {
+type Certificate = {
+  id: string;
+  title: string;
+  issuer: string;
+  date: string;
+  desc: string;
+};
+
+function CertificateCard({ c, i }: { c: Certificate; i: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -698,7 +750,15 @@ function CertificateCard({ c, i }) {
   );
 }
 
-function ExperienceCard({ e, i }) {
+type Experience = {
+  id: string;
+  role: string;
+  company: string;
+  period: string;
+  desc: string;
+};
+
+function ExperienceCard({ e, i }: { e: Experience; i: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -721,8 +781,10 @@ function ExperienceCard({ e, i }) {
 }
 
 function Projetos() {
-  const [tab, setTab] = useState("projetos");
-  const [openProject, setOpenProject] = useState(null);
+  const [tab, setTab] = useState<"projetos" | "certificados" | "experiencias">(
+    "projetos"
+  );
+  const [openProject, setOpenProject] = useState<Project | null>(null);
 
   const content = {
     projetos: PROJECTS.map((p, i) => (
