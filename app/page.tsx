@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll } from "framer-motion";
 import {
   Mail,
   Download,
@@ -36,9 +36,13 @@ type BioLine = { key: string; value: string };
 const FONT_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
+html { scroll-behavior: smooth; }
+
 .f-display { font-family: 'Space Grotesk', sans-serif; }
 .f-body { font-family: 'Inter', sans-serif; }
 .f-mono { font-family: 'JetBrains Mono', monospace; }
+
+body { background-color: #0A0A0E; }
 
 .bg-app { background-color: #0A0A0E; }
 .bg-surface { background-color: #14141B; }
@@ -52,12 +56,47 @@ const FONT_CSS = `
 .text-accent2 { color: #5EEAD4; }
 .bg-accent2 { background-color: #5EEAD4; }
 
+.text-gradient {
+  background: linear-gradient(120deg, #FF8A3D 0%, #FFC177 45%, #5EEAD4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass-nav {
+  background: rgba(10, 10, 14, 0.65);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.card-glow {
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, transform 0.35s ease;
+}
+.card-glow:hover {
+  box-shadow: 0 24px 60px -24px rgba(255, 138, 61, 0.35);
+}
+
 .grain-bg {
   background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
   background-size: 22px 22px;
 }
 
+.section-number {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: #EDEBE3;
+  opacity: 0.045;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
 ::selection { background: #FF8A3D; color: #0A0A0E; }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #0A0A0E; }
+::-webkit-scrollbar-thumb { background: #26262F; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #FF8A3D; }
 `;
 
 const NAV_LINKS = [
@@ -76,16 +115,13 @@ const SKILLS = [
   { name: "Tailwind CSS", level: 92, icon: Wind },
 ];
 
-// Dica: para trocar a imagem de um projeto, coloque o arquivo em /public
-// (ex: /public/projetos/painel-financeiro.png) e ajuste o campo "image" abaixo.
-// Se "image" ficar vazio (""), o card volta a mostrar o placeholder automaticamente.
 const PROJECTS: Project[] = [
   {
     id: "01",
     title: "Painel financeiro",
     desc: "Dashboard de controle de gastos pessoais com gráficos em tempo real, categorização automática de transações e resumo mensal de entradas e saídas.",
     stack: ["Next.js", "TypeScript", "Node.js", "PostgreSQL"],
-    github: "https://github.com/RaferaX/financas-pessoaiso",
+    github: "https://github.com/RaferaX/financas-pessoais",
     deploy: "https://financas-pessoais-hdcq.vercel.app/",
     image: "/painel-financeiro.png",
   },
@@ -118,7 +154,6 @@ const PROJECTS: Project[] = [
   },
 ];
 
-
 const CERTIFICATES = [
   {
     id: "c01",
@@ -146,14 +181,14 @@ const CERTIFICATES = [
 const EXPERIENCES = [
   {
     id: "e01",
-    role: "Desenvolvedor(a) Full-Stack",
+    role: "Desenvolvedor Full-Stack",
     company: "Nome da Empresa",
     period: "2023 — atual",
     desc: "Responsável pelo desenvolvimento de novas funcionalidades no produto principal, atuando do banco de dados à interface.",
   },
   {
     id: "e02",
-    role: "Estagiário(a) de Desenvolvimento",
+    role: "Estagiário de Desenvolvimento",
     company: "Nome da Empresa Anterior",
     period: "2022 — 2023",
     desc: "Suporte no desenvolvimento de features web, correção de bugs e participação em revisões de código.",
@@ -225,46 +260,55 @@ function CodeCard() {
   const { typedCount, charCount } = useTypedLines(BIO_LINES);
 
   return (
-    <motion.div
-      drag
-      dragElastic={0.12}
-      dragMomentum={false}
-      whileDrag={{ scale: 1.02, rotate: -1 }}
-      initial={{ opacity: 0, y: 24, rotate: -2 }}
-      animate={{ opacity: 1, y: 0, rotate: -2 }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-      className="bg-surface border border-app rounded-xl shadow-2xl w-full max-w-md cursor-grab active:cursor-grabbing select-none"
-      style={{ boxShadow: "0 30px 60px -20px rgba(0,0,0,0.6)" }}
-    >
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-app bg-surface-2 rounded-t-xl">
-        <span className="w-3 h-3 rounded-full" style={{ background: "#FF5F56" }} />
-        <span className="w-3 h-3 rounded-full" style={{ background: "#FFBD2E" }} />
-        <span className="w-3 h-3 rounded-full" style={{ background: "#27C93F" }} />
-        <span className="f-mono text-xs text-muted-app ml-2">sobre-mim.js</span>
-      </div>
-      <div className="p-6 f-mono text-sm leading-relaxed min-h-[220px]">
-        <p className="text-muted-app">
-          <span className="text-accent2">const</span> dev = {"{"}
-        </p>
-        {BIO_LINES.map((line, i) => {
-          const full = `${line.key}: ${line.value},`;
-          let display = "";
-          if (i < typedCount) display = full;
-          else if (i === typedCount) display = full.slice(0, charCount);
-          if (i > typedCount) return null;
-          return (
-            <p key={line.key} className="pl-4 text-app">
-              <span className="text-accent">{line.key.split(":")[0]}</span>
-              {display.slice(line.key.length)}
-              {i === typedCount && (
-                <span className="inline-block w-[7px] h-[14px] bg-accent align-middle ml-0.5 animate-pulse" />
-              )}
-            </p>
-          );
-        })}
-        {typedCount >= BIO_LINES.length && <p className="text-muted-app">{"}"}</p>}
-      </div>
-    </motion.div>
+    <div className="relative w-full max-w-md">
+      <div
+        className="absolute -inset-6 rounded-[28px] blur-2xl opacity-30 -z-10"
+        style={{
+          background:
+            "linear-gradient(135deg, #FF8A3D 0%, transparent 60%, #5EEAD4 100%)",
+        }}
+      />
+      <motion.div
+        drag
+        dragElastic={0.12}
+        dragMomentum={false}
+        whileDrag={{ scale: 1.02, rotate: -1 }}
+        initial={{ opacity: 0, y: 24, rotate: -2 }}
+        animate={{ opacity: 1, y: 0, rotate: -2 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="bg-surface border border-app rounded-xl shadow-2xl w-full cursor-grab active:cursor-grabbing select-none"
+        style={{ boxShadow: "0 30px 60px -20px rgba(0,0,0,0.6)" }}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-app bg-surface-2 rounded-t-xl">
+          <span className="w-3 h-3 rounded-full" style={{ background: "#FF5F56" }} />
+          <span className="w-3 h-3 rounded-full" style={{ background: "#FFBD2E" }} />
+          <span className="w-3 h-3 rounded-full" style={{ background: "#27C93F" }} />
+          <span className="f-mono text-xs text-muted-app ml-2">sobre-mim.js</span>
+        </div>
+        <div className="p-6 f-mono text-sm leading-relaxed min-h-[220px]">
+          <p className="text-muted-app">
+            <span className="text-accent2">const</span> dev = {"{"}
+          </p>
+          {BIO_LINES.map((line, i) => {
+            const full = `${line.key}: ${line.value},`;
+            let display = "";
+            if (i < typedCount) display = full;
+            else if (i === typedCount) display = full.slice(0, charCount);
+            if (i > typedCount) return null;
+            return (
+              <p key={line.key} className="pl-4 text-app">
+                <span className="text-accent">{line.key.split(":")[0]}</span>
+                {display.slice(line.key.length)}
+                {i === typedCount && (
+                  <span className="inline-block w-[7px] h-[14px] bg-accent align-middle ml-0.5 animate-pulse" />
+                )}
+              </p>
+            );
+          })}
+          {typedCount >= BIO_LINES.length && <p className="text-muted-app">{"}"}</p>}
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -304,7 +348,7 @@ function SkillCard({ skill, index }: { skill: Skill; index: number }) {
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, delay: index * 0.08, ease: "easeOut" }}
       whileHover={{ y: -4, borderColor: "#FF8A3D" }}
-      className="bg-surface border border-app rounded-xl p-4 transition-colors"
+      className="card-glow bg-surface border border-app rounded-xl p-4"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="w-9 h-9 rounded-lg bg-surface-2 flex items-center justify-center">
@@ -345,24 +389,108 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className={`px-6 md:px-12 ${className}`}>
-      <div className="max-w-6xl mx-auto">{children}</div>
+    <section id={id} className={`relative px-6 md:px-12 overflow-hidden ${className}`}>
+      <div className="max-w-6xl mx-auto relative">{children}</div>
     </section>
+  );
+}
+
+function SectionNumber({ n }: { n: string }) {
+  return (
+    <span className="section-number absolute -top-2 right-0 md:right-2 text-[90px] md:text-[150px] hidden sm:block">
+      {n}
+    </span>
   );
 }
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="f-mono text-xs text-accent tracking-widest uppercase mb-3">
-      // {children}
+    <p className="f-mono text-xs text-accent tracking-widest uppercase mb-3 flex items-center gap-2">
+      <span className="w-6 h-px bg-accent inline-block" />
+      {children}
     </p>
+  );
+}
+
+function BackgroundOrbs() {
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 520,
+          height: 520,
+          top: "-12%",
+          left: "-10%",
+          background: "#FF8A3D",
+          opacity: 0.16,
+          filter: "blur(130px)",
+        }}
+        animate={{ x: [0, 40, 0], y: [0, 30, 0] }}
+        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 460,
+          height: 460,
+          bottom: "-14%",
+          right: "-8%",
+          background: "#5EEAD4",
+          opacity: 0.13,
+          filter: "blur(130px)",
+        }}
+        animate={{ x: [0, -30, 0], y: [0, -40, 0] }}
+        transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 340,
+          height: 340,
+          top: "40%",
+          left: "45%",
+          background: "#FFC177",
+          opacity: 0.07,
+          filter: "blur(110px)",
+        }}
+        animate={{ x: [0, 25, 0], y: [0, -20, 0] }}
+        transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
+
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  return (
+    <motion.div
+      className="fixed top-0 left-0 right-0 h-[2px] z-[100] origin-left"
+      style={{
+        scaleX: scrollYProgress,
+        background: "linear-gradient(90deg, #FF8A3D, #5EEAD4)",
+      }}
+    />
   );
 }
 
 function Nav({ active }: { active: string }) {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+        scrolled ? "glass-nav border-b border-app" : "bg-transparent"
+      }`}
+    >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 md:px-12 py-5">
         <a href="#home" className="f-display text-lg font-semibold text-app flex items-center gap-2">
           <Terminal size={18} className="text-accent" />
@@ -373,11 +501,18 @@ function Nav({ active }: { active: string }) {
             <a
               key={l.id}
               href={`#${l.id}`}
-              className={`f-mono text-sm transition-colors ${
+              className={`relative f-mono text-sm py-1 transition-colors ${
                 active === l.id ? "text-accent" : "text-muted-app hover:text-app"
               }`}
             >
               {l.label}
+              {active === l.id && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1 left-0 right-0 h-[2px] bg-accent rounded-full"
+                  transition={{ type: "spring", duration: 0.5 }}
+                />
+              )}
             </a>
           ))}
         </nav>
@@ -394,7 +529,7 @@ function Nav({ active }: { active: string }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-surface border-t border-app overflow-hidden"
+            className="md:hidden glass-nav border-t border-app overflow-hidden"
           >
             <div className="flex flex-col px-6 py-4 gap-4">
               {NAV_LINKS.map((l) => (
@@ -424,28 +559,39 @@ function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <Eyebrow>disponível para novos projetos</Eyebrow>
+          <div className="inline-flex items-center gap-2 f-mono text-xs text-accent tracking-widest uppercase mb-5 border border-app rounded-full px-3 py-1.5 bg-surface/60">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+            </span>
+            disponível para novos projetos
+          </div>
           <h1 className="f-display text-4xl md:text-6xl font-semibold text-app leading-[1.08] mb-6">
             Eu construo produtos digitais
-            <span className="text-accent"> que funcionam</span> de verdade.
+            <span className="text-gradient"> que funcionam</span> de verdade.
           </h1>
           <p className="f-body text-muted-app text-base md:text-lg max-w-md mb-8">
-            Desenvolvedor(a) full-stack focado em interfaces limpas, código
+            Desenvolvedor full-stack focado em interfaces limpas, código
             sustentável e experiências que resolvem problemas reais.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <a
+            <motion.a
               href="#projetos"
-              className="f-mono text-sm bg-accent text-black px-5 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              className="f-mono text-sm bg-accent text-black px-5 py-3 rounded-lg font-medium flex items-center gap-2"
+              style={{ boxShadow: "0 16px 40px -16px rgba(255,138,61,0.6)" }}
             >
               Ver projetos <ArrowUpRight size={16} />
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="#"
-              className="f-mono text-sm border border-app text-app px-5 py-3 rounded-lg hover:border-accent transition-colors flex items-center gap-2"
+              whileHover={{ scale: 1.03, y: -2, borderColor: "#FF8A3D" }}
+              whileTap={{ scale: 0.97 }}
+              className="f-mono text-sm border border-app text-app px-5 py-3 rounded-lg flex items-center gap-2"
             >
               <Download size={16} /> Baixar CV
-            </a>
+            </motion.a>
           </div>
         </motion.div>
         <div className="flex justify-center md:justify-end">
@@ -456,37 +602,45 @@ function Hero() {
   );
 }
 
-// Troque para true e ajuste o src assim que tiver a foto no /public
 const PROFILE_IMAGE = "/perfil1.png";
 
 function Sobre() {
   return (
     <Section id="sobre" className="py-24 border-t border-app">
+      <SectionNumber n="02" />
       <div className="grid md:grid-cols-2 gap-16 mb-16">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, rotate: -4 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: -2 }}
-            viewport={{ once: true }}
-            whileHover={{ rotate: 0, scale: 1.02 }}
-            transition={{ duration: 0.5 }}
-            className="w-32 h-32 sm:w-40 sm:h-40 flex-shrink-0 rounded-2xl border-2 border-dashed border-app bg-surface flex flex-col items-center justify-center gap-2 overflow-hidden"
-          >
-            {PROFILE_IMAGE ? (
-              <img
-                src={PROFILE_IMAGE}
-                alt="Foto de perfil"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <>
-                <User size={28} className="text-muted-app" />
-                <span className="f-mono text-[10px] text-muted-app text-center px-2">
-                  sua foto aqui
-                </span>
-              </>
-            )}
-          </motion.div>
+          <div className="relative flex-shrink-0">
+            <div
+              className="absolute -inset-3 rounded-3xl blur-xl opacity-40 -z-10"
+              style={{
+                background: "linear-gradient(135deg, #FF8A3D, #5EEAD4)",
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, rotate: -4 }}
+              whileInView={{ opacity: 1, scale: 1, rotate: -2 }}
+              viewport={{ once: true }}
+              whileHover={{ rotate: 0, scale: 1.03 }}
+              transition={{ duration: 0.5 }}
+              className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl border-2 border-dashed border-app bg-surface flex flex-col items-center justify-center gap-2 overflow-hidden"
+            >
+              {PROFILE_IMAGE ? (
+                <img
+                  src={PROFILE_IMAGE}
+                  alt="Foto de perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <>
+                  <User size={28} className="text-muted-app" />
+                  <span className="f-mono text-[10px] text-muted-app text-center px-2">
+                    sua foto aqui
+                  </span>
+                </>
+              )}
+            </motion.div>
+          </div>
           <div>
             <Eyebrow>sobre mim</Eyebrow>
             <h2 className="f-display text-3xl md:text-4xl font-semibold text-app mb-4">
@@ -509,11 +663,11 @@ function Sobre() {
             Gosto de projetos onde consigo participar de decisões de produto,
             não só executar tarefas. Fora do código, estudo design de
             interação e acompanho o que sai de novo no ecossistema
-            JavaScript.
+            JavaScript e demais Frameworks.
           </p>
         </div>
         <div>
-          <Eyebrow>stack principal</Eyebrow>
+          <Eyebrow>stacks principais</Eyebrow>
           <div className="grid grid-cols-2 gap-3 mt-6">
             {SKILLS.map((s, i) => (
               <SkillCard key={s.name} skill={s} index={i} />
@@ -558,7 +712,7 @@ function ProjectCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -3 }}
+      whileHover={{ y: -5 }}
       transition={{ duration: 0.4, delay: i * 0.06 }}
       onClick={() => onOpen(p)}
       role="button"
@@ -566,17 +720,19 @@ function ProjectCard({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onOpen(p);
       }}
-      className="group bg-surface border border-app rounded-xl p-5 hover:border-accent transition-colors cursor-pointer"
+      className="card-glow group bg-surface border border-app rounded-xl p-5 hover:border-accent cursor-pointer"
     >
-      {p.image ? (
-        <img
-          src={p.image}
-          alt={`Screenshot do projeto ${p.title}`}
-          className="w-full aspect-video object-cover rounded-lg mb-4"
-        />
-      ) : (
-        <PhotoPlaceholder label="screenshot do projeto" className="mb-4" />
-      )}
+      <div className="w-full aspect-video rounded-lg mb-4 overflow-hidden">
+        {p.image ? (
+          <img
+            src={p.image}
+            alt={`Screenshot do projeto ${p.title}`}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <PhotoPlaceholder label="screenshot do projeto" />
+        )}
+      </div>
       <div className="flex items-start justify-between mb-3">
         <span className="f-mono text-xs text-muted-app">{p.id}</span>
         <a
@@ -733,8 +889,9 @@ function CertificateCard({ c, i }: { c: Certificate; i: number }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -5 }}
       transition={{ duration: 0.4, delay: i * 0.06 }}
-      className="group bg-surface border border-app rounded-xl p-5 hover:border-accent transition-colors"
+      className="card-glow group bg-surface border border-app rounded-xl p-5 hover:border-accent"
     >
       <PhotoPlaceholder label="foto do certificado" className="mb-4" />
       <div className="flex items-center gap-2 mb-3">
@@ -763,8 +920,9 @@ function ExperienceCard({ e, i }: { e: Experience; i: number }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -5 }}
       transition={{ duration: 0.4, delay: i * 0.06 }}
-      className="group bg-surface border border-app rounded-xl p-5 hover:border-accent transition-colors"
+      className="card-glow group bg-surface border border-app rounded-xl p-5 hover:border-accent"
     >
       <PhotoPlaceholder label="logo da empresa" className="mb-4" />
       <div className="flex items-center gap-2 mb-3">
@@ -800,6 +958,7 @@ function Projetos() {
 
   return (
     <Section id="projetos" className="py-24 border-t border-app">
+      <SectionNumber n="03" />
       <Eyebrow>portfólio</Eyebrow>
       <h2 className="f-display text-3xl md:text-4xl font-semibold text-app mb-8">
         Alguns projetos recentes.
@@ -809,8 +968,11 @@ function Projetos() {
         {PORTFOLIO_TABS.map((t) => (
           <button
             key={t.id}
+            type="button"
             onClick={() => setTab(t.id)}
-            className="relative f-mono text-sm px-4 py-2 rounded-md transition-colors"
+            className={`relative f-mono text-sm px-4 py-2 rounded-md transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              tab !== t.id ? "hover:text-app" : ""
+            }`}
           >
             {tab === t.id && (
               <motion.span
@@ -866,6 +1028,7 @@ function Contato() {
 
   return (
     <Section id="contato" className="py-24 border-t border-app">
+      <SectionNumber n="04" />
       <div className="grid md:grid-cols-2 gap-16">
         <div>
           <Eyebrow>contato</Eyebrow>
@@ -873,36 +1036,39 @@ function Contato() {
             Vamos conversar sobre seu projeto.
           </h2>
           <p className="f-body text-muted-app leading-relaxed mb-8 max-w-md">
-            Estou aberto a freelas, vagas full-time ou só trocar uma ideia
+            Estou aberto a freelas, ou só trocar uma ideia
             sobre tecnologia. Me manda uma mensagem.
           </p>
           <div className="flex gap-4">
-            <a
+            <motion.a
               href="https://github.com/RaferaX"
               target="_blank"
               rel="noreferrer"
-              className="w-11 h-11 flex items-center justify-center rounded-lg border border-app text-app hover:border-accent hover:text-accent transition-colors f-mono text-xs"
+              whileHover={{ y: -3, borderColor: "#FF8A3D" }}
+              className="w-11 h-11 flex items-center justify-center rounded-lg border border-app text-app hover:text-accent transition-colors f-mono text-xs"
             >
               GH
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="https://www.linkedin.com/in/rafael-leonardo-820b4328a"
               target="_blank"
               rel="noreferrer"
-              className="w-11 h-11 flex items-center justify-center rounded-lg border border-app text-app hover:border-accent hover:text-accent transition-colors f-mono text-xs"
+              whileHover={{ y: -3, borderColor: "#FF8A3D" }}
+              className="w-11 h-11 flex items-center justify-center rounded-lg border border-app text-app hover:text-accent transition-colors f-mono text-xs"
             >
               IN
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="#"
-              className="w-11 h-11 flex items-center justify-center rounded-lg border border-app text-app hover:border-accent hover:text-accent transition-colors"
+              whileHover={{ y: -3, borderColor: "#FF8A3D" }}
+              className="w-11 h-11 flex items-center justify-center rounded-lg border border-app text-app hover:text-accent transition-colors"
             >
               <Mail size={18} />
-            </a>
+            </motion.a>
           </div>
         </div>
 
-        <div className="bg-surface border border-app rounded-xl p-6 md:p-8">
+        <div className="relative bg-surface border border-app rounded-xl p-6 md:p-8">
           <AnimatePresence mode="wait">
             {sent ? (
               <motion.div
@@ -934,7 +1100,7 @@ function Contato() {
                     required
                     value={form.nome}
                     onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                    className="w-full bg-surface-2 border border-app rounded-lg px-4 py-2.5 text-app f-body text-sm outline-none focus:border-accent transition-colors"
+                    className="w-full bg-surface-2 border border-app rounded-lg px-4 py-2.5 text-app f-body text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,138,61,0.15)] transition-all"
                     placeholder="Como você se chama"
                   />
                 </div>
@@ -947,7 +1113,7 @@ function Contato() {
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full bg-surface-2 border border-app rounded-lg px-4 py-2.5 text-app f-body text-sm outline-none focus:border-accent transition-colors"
+                    className="w-full bg-surface-2 border border-app rounded-lg px-4 py-2.5 text-app f-body text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,138,61,0.15)] transition-all"
                     placeholder="seu@email.com"
                   />
                 </div>
@@ -960,17 +1126,20 @@ function Contato() {
                     rows={4}
                     value={form.mensagem}
                     onChange={(e) => setForm({ ...form, mensagem: e.target.value })}
-                    className="w-full bg-surface-2 border border-app rounded-lg px-4 py-2.5 text-app f-body text-sm outline-none focus:border-accent transition-colors resize-none"
+                    className="w-full bg-surface-2 border border-app rounded-lg px-4 py-2.5 text-app f-body text-sm outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(255,138,61,0.15)] transition-all resize-none"
                     placeholder="Conta um pouco sobre o projeto"
                   />
                 </div>
-                <button
+                <motion.button
                   type="button"
                   onClick={handleSubmit}
-                  className="w-full f-mono text-sm bg-accent text-black py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full f-mono text-sm bg-accent text-black py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+                  style={{ boxShadow: "0 16px 40px -18px rgba(255,138,61,0.6)" }}
                 >
                   Enviar mensagem <Send size={15} />
-                </button>
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1000,27 +1169,31 @@ export default function Portfolio() {
   }, []);
 
   return (
-    <div className="bg-app text-app min-h-screen grain-bg">
+    <div className="relative text-app min-h-screen grain-bg overflow-x-hidden">
       <style>{FONT_CSS}</style>
-      <Nav active={active} />
-      <Hero />
-      <Sobre />
-      <Projetos />
-      <Contato />
-      <footer className="border-t border-app py-8 px-6 md:px-12">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="f-mono text-xs text-muted-app">
-            © {new Date().getFullYear()} — feito com Next.js, Tailwind e Framer Motion
-          </p>
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="f-mono text-xs text-muted-app hover:text-accent transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            voltar ao topo <ArrowUpRight size={13} className="rotate-[-45deg]" />
-          </button>
-        </div>
-      </footer>
+      <BackgroundOrbs />
+      <ScrollProgress />
+      <div className="relative z-10">
+        <Nav active={active} />
+        <Hero />
+        <Sobre />
+        <Projetos />
+        <Contato />
+        <footer className="border-t border-app py-8 px-6 md:px-12">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="f-mono text-xs text-muted-app">
+              © {new Date().getFullYear()} — feito com Next.js, Tailwind e Framer Motion
+            </p>
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="f-mono text-xs text-muted-app hover:text-accent transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              voltar ao topo <ArrowUpRight size={13} className="rotate-[-45deg]" />
+            </button>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
